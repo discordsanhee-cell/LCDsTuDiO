@@ -57,7 +57,7 @@ PRESETS = {
     "아날로그 시계": {"type": "clock", "x": 120, "y": 160, "r": 60, "color": "#ffffff", "hand": "#ffffff", "sec": "#ef4444", "seconds": True},
     "D-day": {"type": "text", "x": 120, "y": 200, "text": "크리스마스 {dday:2026-12-25}", "font": "kr16", "size": 1, "color": "#fbbf24", "align": "center"},
     "변수": {"type": "text", "x": 20, "y": 240, "text": "CPU {var:cpu}%", "font": "kr16", "size": 1, "color": "#7dd3fc", "align": "left"},
-    "날씨 기온": {"type": "text", "x": 120, "y": 60, "text": "{wtemp}°C", "font": "kr24", "size": 2, "color": "#ffffff", "align": "center"},
+    "센서 온도": {"type": "text", "x": 120, "y": 60, "text": "{ntc}°C", "font": "kr24", "size": 2, "color": "#ffffff", "align": "center"},
     "날씨": {"type": "text", "x": 120, "y": 120, "text": "{wdesc}", "font": "kr24", "size": 1, "color": "#7dd3fc", "align": "center"},
     "사각형": {"type": "rect", "x": 20, "y": 20, "w": 100, "h": 60, "color": "#1e293b", "fill": True, "radius": 8},
     "원": {"type": "circle", "x": 120, "y": 160, "r": 30, "color": "#3b82f6", "fill": True},
@@ -78,7 +78,8 @@ HELP = (
     "글자 안에 넣으면 보드가 자동으로 바꿔줘요\n"
     "시간  {HH} {mm} {ss}  12시간 {hh}  {ampm}=오전/오후\n"
     "날짜  {YYYY} {MM} {DD}  요일 {ddd}=월 {dddd}=월요일 {eee}=Mon\n"
-    "날씨  {wtemp}=기온 {wdesc}=맑음/흐림/비.. {city}=도시\n"
+    "센서  {ntc}=보드에 연결된 온도 센서 (없으면 --)\n"
+    "외부 날씨  {wtemp}=기온 {wdesc}=맑음/흐림/비.. {city}=도시\n"
     "정보  {ip} {ssid} {rssi} {temp}=칩온도 {uptime} {heap}\n"
     "배터리 (T-Display)  {bat}=전압 {bat_pct}=% {bat_txt}=충전 중/85%\n"
     "D-day  {dday:2026-12-25}  →  D-23 / D-Day / D+3\n"
@@ -118,7 +119,7 @@ def expand(s, ctx):
             **{"ip": ctx.get("ip", "192.168.0.10"), "ssid": ctx.get("ssid", "MyWiFi"), "rssi": "-55",
                "temp": "42.5", "heap": "180", "bat": "4.05", "bat_pct": "83", "bat_txt": "83%",
                "name": ctx.get("name", "lcd"), "uptime": "0d 01:23",
-               "wtemp": ctx.get("wtemp", "18.4"), "wdesc": ctx.get("wdesc", "구름 조금"), "city": ctx.get("city", "Seoul"),
+               "ntc": ctx.get("ntc", "--"), "wtemp": ctx.get("wtemp", "18.4"), "wdesc": ctx.get("wdesc", "구름 조금"), "city": ctx.get("city", "Seoul"),
                "sec_pct": str(now.second * 100 // 59), "min_pct": str(now.minute * 100 // 59),
                "day_pct": str((now.hour * 3600 + now.minute * 60 + now.second) * 100 // 86399)},
         }
@@ -836,6 +837,8 @@ def main(page: ft.Page):
         if not info:
             return
         st["ctx"].update(ip=info.get("ip"), ssid=info.get("ssid"), name=info.get("name"))
+        sensor = info.get("ntc")
+        st["ctx"]["ntc"] = f"{sensor:.1f}" if isinstance(sensor, (int, float)) else "--"
         # 보드는 평소 인터넷이 없어서 시간/날씨를 이 기기에서 넣어줌
         await run_net("시간 맞추기", dev().set_time, time.time())
         wt = await asyncio.to_thread(fetch_weather)
@@ -1187,8 +1190,22 @@ def main(page: ft.Page):
             except Exception:
                 pass
 
+    async def sensor_ticker():
+        while True:
+            await asyncio.sleep(10)
+            if not ble.connected or st.get("busy"):
+                continue
+            if not any("{ntc}" in str(w.get("text", "")) for w in st["layout"]["widgets"]):
+                continue
+            info = await run_net("센서 온도 확인", dev().info)
+            if info is not None:
+                sensor = info.get("ntc")
+                st["ctx"]["ntc"] = f"{sensor:.1f}" if isinstance(sensor, (int, float)) else "--"
+                refresh_preview()
+
     page.run_task(start)
     page.run_task(ticker)
+    page.run_task(sensor_ticker)
 
 
 if __name__ == "__main__":
