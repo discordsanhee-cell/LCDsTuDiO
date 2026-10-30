@@ -1,0 +1,16 @@
+[project]
+name = "flet-lcdble"
+version = "0.1.0"
+description = "LCD Studio 블루투스(BLE) - lcdpanel 보드를 WiFi 없이 조종 (Flutter flutter_blue_plus)"
+requires-python = ">=3.10"
+dependencies = ["flet>=1.0"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["**/*"]

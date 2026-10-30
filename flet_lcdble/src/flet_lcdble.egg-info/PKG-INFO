@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: flet-lcdble
+Version: 0.1.0
+Summary: LCD Studio 블루투스(BLE) - lcdpanel 보드를 WiFi 없이 조종 (Flutter flutter_blue_plus)
+Requires-Python: >=3.10
+Requires-Dist: flet>=1.0

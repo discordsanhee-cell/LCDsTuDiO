@@ -1,0 +1,14 @@
+name: flet_lcdble
+description: LCD Studio 블루투스(BLE) 서비스 - lcdpanel 보드 조종
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flet:
+  flutter_blue_plus: ^1.35.0
